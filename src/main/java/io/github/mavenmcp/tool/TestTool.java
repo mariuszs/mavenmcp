@@ -6,9 +6,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.mavenmcp.config.ServerConfig;
 import io.github.mavenmcp.maven.MavenExecutionException;
@@ -18,6 +15,7 @@ import io.github.mavenmcp.model.BuildResult;
 import io.github.mavenmcp.model.TestFailure;
 import io.github.mavenmcp.parser.CompilationOutputParser;
 import io.github.mavenmcp.parser.MavenOutputFilter;
+import io.github.mavenmcp.parser.XmlUtils;
 import io.github.mavenmcp.parser.StackTraceProcessor;
 import io.github.mavenmcp.parser.SurefireReportParser;
 import io.modelcontextprotocol.json.jackson.JacksonMcpJsonMapper;
@@ -92,8 +90,8 @@ public final class TestTool {
                         List<String> args = buildArgs(params);
                         int stackTraceLines = extractStackTraceLines(params);
                         String appPackage = extractAppPackage(params, config.projectDir());
-                        boolean includeTestLogs = extractBoolean(params, "includeTestLogs", true);
-                        int testOutputLimit = extractInt(params, "testOutputLimit",
+                        boolean includeTestLogs = ToolUtils.extractBoolean(params, "includeTestLogs", true);
+                        int testOutputLimit = ToolUtils.extractInt(params, "testOutputLimit",
                                 SurefireReportParser.DEFAULT_PER_TEST_OUTPUT_LIMIT);
                         log.info("maven_test called with args: {}, stackTraceLines: {}, appPackage: {}",
                                 args, stackTraceLines, appPackage);
@@ -108,8 +106,7 @@ public final class TestTool {
 
                         // Try Surefire XML reports first
                         var surefireResult = SurefireReportParser.parse(
-                                config.projectDir(), stackTraceLines,
-                                includeTestLogs, testOutputLimit);
+                                config.projectDir(), includeTestLogs, testOutputLimit);
 
                         BuildResult buildResult;
                         if (surefireResult.isPresent()) {
@@ -160,10 +157,8 @@ public final class TestTool {
     private static List<TestFailure> processStackTraces(List<TestFailure> failures,
                                                          String appPackage, int stackTraceLines) {
         return failures.stream()
-                .map(f -> new TestFailure(
-                        f.testClass(), f.testMethod(), f.message(),
-                        StackTraceProcessor.process(f.stackTrace(), appPackage, stackTraceLines),
-                        f.testOutput()))
+                .map(f -> f.withStackTrace(
+                        StackTraceProcessor.process(f.stackTrace(), appPackage, stackTraceLines)))
                 .toList();
     }
 
@@ -180,11 +175,8 @@ public final class TestTool {
     }
 
     private static int extractStackTraceLines(Map<String, Object> params) {
-        Object value = params.get("stackTraceLines");
-        if (value instanceof Number num) {
-            return num.intValue();
-        }
-        return SurefireReportParser.DEFAULT_STACK_TRACE_LINES;
+        return ToolUtils.extractInt(params, "stackTraceLines",
+                SurefireReportParser.DEFAULT_STACK_TRACE_LINES);
     }
 
     /**
@@ -207,10 +199,7 @@ public final class TestTool {
             if (!pomFile.exists()) {
                 return null;
             }
-            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-            factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
-            DocumentBuilder builder = factory.newDocumentBuilder();
-            Document doc = builder.parse(pomFile);
+            Document doc = XmlUtils.newSecureDocumentBuilder().parse(pomFile);
 
             // Look for direct child <groupId> of <project>
             NodeList groupIds = doc.getDocumentElement().getElementsByTagName("groupId");
@@ -224,21 +213,5 @@ public final class TestTool {
             log.debug("Failed to derive groupId from pom.xml: {}", e.getMessage());
         }
         return null;
-    }
-
-    private static boolean extractBoolean(Map<String, Object> params, String key, boolean defaultValue) {
-        Object value = params.get(key);
-        if (value instanceof Boolean b) {
-            return b;
-        }
-        return defaultValue;
-    }
-
-    private static int extractInt(Map<String, Object> params, String key, int defaultValue) {
-        Object value = params.get(key);
-        if (value instanceof Number num) {
-            return num.intValue();
-        }
-        return defaultValue;
     }
 }

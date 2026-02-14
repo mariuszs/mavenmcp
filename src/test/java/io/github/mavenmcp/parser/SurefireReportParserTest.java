@@ -30,7 +30,7 @@ class SurefireReportParserTest {
     void shouldParseAllPassingTests() throws IOException {
         copyFixture("TEST-com.example.PassingTest.xml");
 
-        var result = SurefireReportParser.parse(tempDir, 50);
+        var result = SurefireReportParser.parse(tempDir);
 
         assertThat(result).isPresent();
         SurefireResult sr = result.get();
@@ -45,7 +45,7 @@ class SurefireReportParserTest {
     void shouldParseTestFailures() throws IOException {
         copyFixture("TEST-com.example.FailingTest.xml");
 
-        var result = SurefireReportParser.parse(tempDir, 50);
+        var result = SurefireReportParser.parse(tempDir);
 
         assertThat(result).isPresent();
         SurefireResult sr = result.get();
@@ -64,7 +64,7 @@ class SurefireReportParserTest {
     void shouldParseTestErrors() throws IOException {
         copyFixture("TEST-com.example.ErrorTest.xml");
 
-        var result = SurefireReportParser.parse(tempDir, 50);
+        var result = SurefireReportParser.parse(tempDir);
 
         assertThat(result).isPresent();
         SurefireResult sr = result.get();
@@ -82,7 +82,7 @@ class SurefireReportParserTest {
     void shouldParseSkippedTests() throws IOException {
         copyFixture("TEST-com.example.SkippedTest.xml");
 
-        var result = SurefireReportParser.parse(tempDir, 50);
+        var result = SurefireReportParser.parse(tempDir);
 
         assertThat(result).isPresent();
         SurefireResult sr = result.get();
@@ -97,7 +97,7 @@ class SurefireReportParserTest {
         copyFixture("TEST-com.example.FailingTest.xml");
         copyFixture("TEST-com.example.ErrorTest.xml");
 
-        var result = SurefireReportParser.parse(tempDir, 50);
+        var result = SurefireReportParser.parse(tempDir);
 
         assertThat(result).isPresent();
         SurefireResult sr = result.get();
@@ -111,7 +111,7 @@ class SurefireReportParserTest {
     void shouldReturnEmptyWhenNoReportsDirectory() {
         Path noReportsDir = tempDir.resolve("nonexistent");
 
-        var result = SurefireReportParser.parse(noReportsDir, 50);
+        var result = SurefireReportParser.parse(noReportsDir);
 
         assertThat(result).isEmpty();
     }
@@ -119,25 +119,9 @@ class SurefireReportParserTest {
     @Test
     void shouldReturnEmptyWhenEmptyReportsDirectory() {
         // reportsDir exists but has no XML files
-        var result = SurefireReportParser.parse(tempDir, 50);
+        var result = SurefireReportParser.parse(tempDir);
 
         assertThat(result).isEmpty();
-    }
-
-    @Test
-    void shouldReturnRawStackTraceWithoutTruncation() throws IOException {
-        copyFixture("TEST-com.example.FailingTest.xml");
-
-        // stackTraceLines param is accepted but parser no longer truncates —
-        // smart truncation is applied downstream by StackTraceProcessor
-        var result = SurefireReportParser.parse(tempDir, 2);
-
-        assertThat(result).isPresent();
-        assertThat(result.get().failures()).isNotEmpty();
-        TestFailure first = result.get().failures().getFirst();
-        // Fixture has 3-line stack traces — all lines should be preserved
-        assertThat(first.stackTrace()).isNotNull();
-        assertThat(first.stackTrace().lines().count()).isGreaterThan(2);
     }
 
     @Nested
@@ -147,7 +131,7 @@ class SurefireReportParserTest {
         void shouldExtractSystemOutFromFailingTest() throws IOException {
             copyFixture("TEST-com.example.FailingTestWithLogs.xml");
 
-            var result = SurefireReportParser.parse(tempDir, 50);
+            var result = SurefireReportParser.parse(tempDir);
 
             assertThat(result).isPresent();
             var failures = result.get().failures();
@@ -165,7 +149,7 @@ class SurefireReportParserTest {
         void shouldExtractSystemOutOnlyFromFailingTest() throws IOException {
             copyFixture("TEST-com.example.FailingTestWithLogs.xml");
 
-            var result = SurefireReportParser.parse(tempDir, 50);
+            var result = SurefireReportParser.parse(tempDir);
 
             assertThat(result).isPresent();
             var failures = result.get().failures();
@@ -181,7 +165,7 @@ class SurefireReportParserTest {
         void shouldReturnNullOutputWhenNoSystemElements() throws IOException {
             copyFixture("TEST-com.example.FailingTest.xml");
 
-            var result = SurefireReportParser.parse(tempDir, 50);
+            var result = SurefireReportParser.parse(tempDir);
 
             assertThat(result).isPresent();
             for (TestFailure failure : result.get().failures()) {
@@ -193,7 +177,7 @@ class SurefireReportParserTest {
         void shouldSkipExtractionWhenIncludeTestLogsFalse() throws IOException {
             copyFixture("TEST-com.example.FailingTestWithLogs.xml");
 
-            var result = SurefireReportParser.parse(tempDir, 50, false, 2000);
+            var result = SurefireReportParser.parse(tempDir, false, 2000);
 
             assertThat(result).isPresent();
             for (TestFailure failure : result.get().failures()) {
@@ -206,7 +190,7 @@ class SurefireReportParserTest {
             copyFixture("TEST-com.example.FailingTestWithLogs.xml");
 
             // Very small per-test limit
-            var result = SurefireReportParser.parse(tempDir, 50, true, 50);
+            var result = SurefireReportParser.parse(tempDir, true, 50);
 
             assertThat(result).isPresent();
             for (TestFailure failure : result.get().failures()) {
@@ -244,7 +228,7 @@ class SurefireReportParserTest {
             Files.writeString(reportsDir.resolve("TEST-com.example.BigTest.xml"), xml);
 
             // Per-test limit large enough to not truncate, total limit of 10000
-            var result = SurefireReportParser.parse(tempDir, 50, true, 5000);
+            var result = SurefireReportParser.parse(tempDir, true, 5000);
 
             assertThat(result).isPresent();
             var failures = result.get().failures();
@@ -271,7 +255,7 @@ class SurefireReportParserTest {
 
             Files.writeString(reportsDir.resolve("TEST-com.example.StderrTest.xml"), xml);
 
-            var result = SurefireReportParser.parse(tempDir, 50);
+            var result = SurefireReportParser.parse(tempDir);
 
             assertThat(result).isPresent();
             var failure = result.get().failures().getFirst();

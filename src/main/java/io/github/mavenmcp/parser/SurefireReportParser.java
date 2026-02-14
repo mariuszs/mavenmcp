@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.Optional;
 
 import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
 
 import io.github.mavenmcp.model.TestFailure;
 import io.github.mavenmcp.model.TestSummary;
@@ -36,24 +35,22 @@ public final class SurefireReportParser {
     /**
      * Parse Surefire XML reports for the given project.
      *
-     * @param projectDir      project root directory
-     * @param stackTraceLines max lines per stack trace (default 50)
+     * @param projectDir project root directory
      * @return parsed test results, or empty if no reports found
      */
-    public static Optional<SurefireResult> parse(Path projectDir, int stackTraceLines) {
-        return parse(projectDir, stackTraceLines, true, DEFAULT_PER_TEST_OUTPUT_LIMIT);
+    public static Optional<SurefireResult> parse(Path projectDir) {
+        return parse(projectDir, true, DEFAULT_PER_TEST_OUTPUT_LIMIT);
     }
 
     /**
      * Parse Surefire XML reports with log extraction options.
      *
      * @param projectDir      project root directory
-     * @param stackTraceLines max lines per stack trace (default 50)
      * @param includeTestLogs whether to extract system-out/system-err from test cases
      * @param testOutputLimit per-test character limit for extracted output (default 2000)
      * @return parsed test results, or empty if no reports found
      */
-    public static Optional<SurefireResult> parse(Path projectDir, int stackTraceLines,
+    public static Optional<SurefireResult> parse(Path projectDir,
                                                   boolean includeTestLogs, int testOutputLimit) {
         Path reportsDir = projectDir.resolve(REPORTS_DIR);
 
@@ -74,10 +71,7 @@ public final class SurefireReportParser {
         List<TestFailure> failures = new ArrayList<>();
 
         try {
-            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-            // Disable external entities for security
-            factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
-            DocumentBuilder builder = factory.newDocumentBuilder();
+            DocumentBuilder builder = XmlUtils.newSecureDocumentBuilder();
 
             for (File xmlFile : xmlFiles) {
                 try {
@@ -204,9 +198,7 @@ public final class SurefireReportParser {
                     for (int j = i; j < failures.size(); j++) {
                         TestFailure orig = failures.get(j);
                         if (orig.testOutput() != null) {
-                            failures.set(j, new TestFailure(
-                                    orig.testClass(), orig.testMethod(),
-                                    orig.message(), orig.stackTrace(), null));
+                            failures.set(j, orig.withTestOutput(null));
                         }
                     }
                     break;

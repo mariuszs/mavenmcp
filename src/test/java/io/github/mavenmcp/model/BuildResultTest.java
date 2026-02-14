@@ -14,7 +14,7 @@ class BuildResultTest {
     @Test
     void shouldOmitNullFieldsFromJson() throws Exception {
         var result = new BuildResult(
-                BuildResult.SUCCESS, 1200,
+                BuildStatus.SUCCESS, 1200,
                 List.of(), List.of(),
                 null, null, null, null
         );
@@ -33,7 +33,7 @@ class BuildResultTest {
     void shouldIncludeNonNullFields() throws Exception {
         var error = new CompilationError("src/main/java/Foo.java", 42, 15, "cannot find symbol", "ERROR");
         var result = new BuildResult(
-                BuildResult.FAILURE, 3000,
+                BuildStatus.FAILURE, 3000,
                 List.of(error), List.of(),
                 null, null, null, "raw output here"
         );

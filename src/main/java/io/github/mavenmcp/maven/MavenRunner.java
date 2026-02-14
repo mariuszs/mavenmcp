@@ -8,6 +8,8 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -23,6 +25,7 @@ import org.slf4j.LoggerFactory;
 public class MavenRunner {
 
     private static final Logger log = LoggerFactory.getLogger(MavenRunner.class);
+    private static final ExecutorService STREAM_READER_EXECUTOR = Executors.newVirtualThreadPerTaskExecutor();
 
     /** Default timeout for Maven executions in milliseconds (2 minutes). */
     public static final int DEFAULT_TIMEOUT_MS = 120_000;
@@ -104,6 +107,6 @@ public class MavenRunner {
                 log.warn("Error reading process stream: {}", e.getMessage());
                 return "";
             }
-        });
+        }, STREAM_READER_EXECUTOR);
     }
 }

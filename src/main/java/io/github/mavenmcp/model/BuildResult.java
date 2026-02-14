@@ -19,7 +19,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record BuildResult(
-        String status,
+        BuildStatus status,
         long duration,
         List<CompilationError> errors,
         List<CompilationError> warnings,
@@ -28,9 +28,4 @@ public record BuildResult(
         Object artifact,
         String output
 ) {
-
-    /** Status constants */
-    public static final String SUCCESS = "SUCCESS";
-    public static final String FAILURE = "FAILURE";
-    public static final String TIMEOUT = "TIMEOUT";
 }

@@ -8,6 +8,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.mavenmcp.maven.MavenExecutionResult;
 import io.github.mavenmcp.model.BuildResult;
+import io.github.mavenmcp.model.BuildStatus;
 import io.modelcontextprotocol.spec.McpSchema.CallToolResult;
 import io.modelcontextprotocol.spec.McpSchema.TextContent;
 
@@ -79,7 +80,7 @@ final class ToolUtils {
     static CallToolResult handleTimeout(MavenExecutionResult execResult, ObjectMapper objectMapper)
             throws JsonProcessingException {
         var buildResult = new BuildResult(
-                BuildResult.TIMEOUT, execResult.duration(),
+                BuildStatus.TIMEOUT, execResult.duration(),
                 null, null, null, null, null, execResult.stdout());
         String json = objectMapper.writeValueAsString(buildResult);
         return new CallToolResult(List.of(new TextContent(json)), true);

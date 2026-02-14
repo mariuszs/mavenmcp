@@ -214,7 +214,7 @@ public final class SurefireReportParser {
         }
         try {
             return Integer.parseInt(value);
-        } catch (NumberFormatException e) {
+        } catch (NumberFormatException _) {
             return 0;
         }
     }

@@ -8,6 +8,7 @@ import io.github.mavenmcp.maven.MavenExecutionException;
 import io.github.mavenmcp.maven.MavenExecutionResult;
 import io.github.mavenmcp.maven.MavenRunner;
 import io.github.mavenmcp.model.BuildResult;
+import io.github.mavenmcp.model.BuildStatus;
 import io.modelcontextprotocol.json.jackson.JacksonMcpJsonMapper;
 import io.modelcontextprotocol.server.McpServerFeatures.SyncToolSpecification;
 import io.modelcontextprotocol.spec.McpSchema.CallToolResult;
@@ -69,8 +70,8 @@ public final class CleanTool {
                             return ToolUtils.handleTimeout(execResult, objectMapper);
                         }
 
-                        String status = execResult.isSuccess() ? BuildResult.SUCCESS : BuildResult.FAILURE;
-                        String output = execResult.isSuccess() ? null : execResult.stdout();
+                        var status = execResult.isSuccess() ? BuildStatus.SUCCESS : BuildStatus.FAILURE;
+                        var output = execResult.isSuccess() ? null : execResult.stdout();
 
                         var buildResult = new BuildResult(
                                 status, execResult.duration(),

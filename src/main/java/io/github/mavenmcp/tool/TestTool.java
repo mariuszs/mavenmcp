@@ -10,6 +10,7 @@ import io.github.mavenmcp.maven.MavenExecutionException;
 import io.github.mavenmcp.maven.MavenExecutionResult;
 import io.github.mavenmcp.maven.MavenRunner;
 import io.github.mavenmcp.model.BuildResult;
+import io.github.mavenmcp.model.BuildStatus;
 import io.github.mavenmcp.model.TestFailure;
 import io.github.mavenmcp.parser.CompilationOutputParser;
 import io.github.mavenmcp.parser.MavenOutputFilter;
@@ -104,7 +105,7 @@ public final class TestTool {
                             return ToolUtils.handleTimeout(execResult, objectMapper);
                         }
 
-                        String status = execResult.isSuccess() ? BuildResult.SUCCESS : BuildResult.FAILURE;
+                        var status = execResult.isSuccess() ? BuildStatus.SUCCESS : BuildStatus.FAILURE;
 
                         // Try Surefire XML reports first
                         var surefireResult = SurefireReportParser.parse(

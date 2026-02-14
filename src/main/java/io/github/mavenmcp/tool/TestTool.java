@@ -3,6 +3,7 @@ package io.github.mavenmcp.tool;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.mavenmcp.config.ServerConfig;
@@ -82,29 +83,8 @@ public final class TestTool {
                         var surefireResult = SurefireReportParser.parse(
                                 config.projectDir(), stackTraceLines);
 
-                        BuildResult buildResult;
-                        if (surefireResult.isPresent()) {
-                            // Test results available from XML
-                            var sr = surefireResult.get();
-                            buildResult = new BuildResult(
-                                    status, execResult.duration(),
-                                    null, null,
-                                    sr.summary(), sr.failures(),
-                                    null, output);
-                        } else if (!execResult.isSuccess()) {
-                            // No XML reports + failure = likely compilation error
-                            var parseResult = CompilationOutputParser.parse(
-                                    execResult.stdout(), config.projectDir());
-                            buildResult = new BuildResult(
-                                    status, execResult.duration(),
-                                    parseResult.errors(), parseResult.warnings(),
-                                    null, null, null, output);
-                        } else {
-                            // Success but no XML (shouldn't happen normally)
-                            buildResult = new BuildResult(
-                                    status, execResult.duration(),
-                                    null, null, null, null, null, null);
-                        }
+                        var buildResult = buildTestResult(
+                                execResult, surefireResult, config, status, output);
 
                         String json = objectMapper.writeValueAsString(buildResult);
                         return new CallToolResult(List.of(new TextContent(json)), false);
@@ -120,6 +100,37 @@ public final class TestTool {
                     }
                 }
         );
+    }
+
+    private static BuildResult buildTestResult(
+            MavenExecutionResult execResult,
+            Optional<SurefireReportParser.SurefireResult> surefireResult,
+            ServerConfig config, String status, String output) {
+
+        if (surefireResult.isPresent()) {
+            // Test results available from XML
+            var sr = surefireResult.get();
+            return new BuildResult(
+                    status, execResult.duration(),
+                    null, null,
+                    sr.summary(), sr.failures(),
+                    null, output);
+        }
+
+        if (!execResult.isSuccess()) {
+            // No XML reports + failure = likely compilation error
+            var parseResult = CompilationOutputParser.parse(
+                    execResult.stdout(), config.projectDir());
+            return new BuildResult(
+                    status, execResult.duration(),
+                    parseResult.errors(), parseResult.warnings(),
+                    null, null, null, output);
+        }
+
+        // Success but no XML (shouldn't happen normally)
+        return new BuildResult(
+                status, execResult.duration(),
+                null, null, null, null, null, null);
     }
 
     private static List<String> buildArgs(Map<String, Object> params) {

@@ -69,7 +69,7 @@ public final class CompileTool {
 
                         var status = execResult.isSuccess() ? BuildStatus.SUCCESS : BuildStatus.FAILURE;
                         // Raw output only on failure
-                        String output = execResult.isSuccess() ? null : execResult.stdout();
+                        var output = execResult.isSuccess() ? null : execResult.stdout();
 
                         var buildResult = new BuildResult(
                                 status, execResult.duration(),

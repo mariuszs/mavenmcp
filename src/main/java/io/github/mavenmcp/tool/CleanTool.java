@@ -62,7 +62,7 @@ public final class CleanTool {
                                 config.mavenExecutable(), config.projectDir());
 
                         var status = execResult.isSuccess() ? BuildStatus.SUCCESS : BuildStatus.FAILURE;
-                        String output = execResult.isSuccess() ? null : execResult.stdout();
+                        var output = execResult.isSuccess() ? null : execResult.stdout();
 
                         var buildResult = new BuildResult(
                                 status, execResult.duration(),

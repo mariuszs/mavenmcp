@@ -77,7 +77,7 @@ public final class TestTool {
                                 config.mavenExecutable(), config.projectDir());
 
                         var status = execResult.isSuccess() ? BuildStatus.SUCCESS : BuildStatus.FAILURE;
-                        String output = execResult.isSuccess() ? null : execResult.stdout();
+                        var output = execResult.isSuccess() ? null : execResult.stdout();
 
                         // Try Surefire XML reports first
                         var surefireResult = SurefireReportParser.parse(

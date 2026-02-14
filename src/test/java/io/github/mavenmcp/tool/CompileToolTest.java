@@ -24,7 +24,7 @@ class CompileToolTest {
     @Test
     void shouldReturnSuccessWithNoWarnings() {
         String stdout = "[INFO] Compiling 5 source files\n[INFO] BUILD SUCCESS";
-        var runner = new TestRunners.StubRunner(new MavenExecutionResult(0, stdout, "", 3000));
+        var runner = new TestRunners.StubRunner(new MavenExecutionResult(0, stdout, "", 3000, false));
         SyncToolSpecification spec = CompileTool.create(config, runner, objectMapper);
 
         CallToolResult result = spec.call().apply(null, Map.of());
@@ -38,7 +38,7 @@ class CompileToolTest {
     @Test
     void shouldReturnFailureWithParsedErrors() {
         String stdout = "[ERROR] /home/user/my-project/src/main/java/Foo.java:[42,15] cannot find symbol\n[ERROR] BUILD FAILURE";
-        var runner = new TestRunners.StubRunner(new MavenExecutionResult(1, stdout, "", 4000));
+        var runner = new TestRunners.StubRunner(new MavenExecutionResult(1, stdout, "", 4000, false));
         SyncToolSpecification spec = CompileTool.create(config, runner, objectMapper);
 
         CallToolResult result = spec.call().apply(null, Map.of());
@@ -53,7 +53,7 @@ class CompileToolTest {
     @Test
     void shouldReturnSuccessWithWarnings() {
         String stdout = "[WARNING] /home/user/my-project/src/main/java/Old.java:[10,5] [deprecation] deprecated method\n[INFO] BUILD SUCCESS";
-        var runner = new TestRunners.StubRunner(new MavenExecutionResult(0, stdout, "", 2000));
+        var runner = new TestRunners.StubRunner(new MavenExecutionResult(0, stdout, "", 2000, false));
         SyncToolSpecification spec = CompileTool.create(config, runner, objectMapper);
 
         CallToolResult result = spec.call().apply(null, Map.of());
@@ -75,4 +75,15 @@ class CompileToolTest {
         assertThat(runner.capturedArgs).containsExactly("-DskipFrontend");
     }
 
+    @Test
+    void shouldReturnTimeoutStatus() {
+        var runner = new TestRunners.StubRunner(new MavenExecutionResult(-1, "partial", "", 120000, true));
+        SyncToolSpecification spec = CompileTool.create(config, runner, objectMapper);
+
+        CallToolResult result = spec.call().apply(null, Map.of());
+
+        String json = result.content().getFirst().toString();
+        assertThat(json).contains("TIMEOUT");
+        assertThat(result.isError()).isTrue();
+    }
 }

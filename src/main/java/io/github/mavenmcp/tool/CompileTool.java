@@ -35,6 +35,10 @@ public final class CompileTool {
                   "type": "array",
                   "items": { "type": "string" },
                   "description": "Additional Maven CLI arguments (e.g. [\\"-DskipFrontend\\", \\"-Pdev\\"])"
+                },
+                "timeout": {
+                  "type": "integer",
+                  "description": "Timeout in milliseconds (default: 120000)"
                 }
               }
             }
@@ -56,11 +60,16 @@ public final class CompileTool {
                 (exchange, params) -> {
                     try {
                         List<String> args = ToolUtils.extractArgs(params);
+                        int timeoutMs = ToolUtils.extractInt(params, "timeout", MavenRunner.DEFAULT_TIMEOUT_MS);
                         log.info("maven_compile called with args: {}", args);
 
                         MavenExecutionResult execResult = runner.execute(
                                 "compile", args,
-                                config.mavenExecutable(), config.projectDir());
+                                config.mavenExecutable(), config.projectDir(), timeoutMs);
+
+                        if (execResult.timedOut()) {
+                            return ToolUtils.handleTimeout(execResult, objectMapper);
+                        }
 
                         // Parse compilation output
                         var parseResult = CompilationOutputParser.parse(
@@ -75,8 +84,7 @@ public final class CompileTool {
                                 parseResult.errors(), parseResult.warnings(),
                                 null, null, null, output);
 
-                        String json = objectMapper.writeValueAsString(buildResult);
-                        return new CallToolResult(List.of(new TextContent(json)), false);
+                        return ToolUtils.toResult(buildResult, objectMapper);
 
                     } catch (MavenExecutionException e) {
                         log.error("maven_compile failed: {}", e.getMessage());

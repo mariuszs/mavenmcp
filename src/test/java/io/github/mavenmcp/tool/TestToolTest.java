@@ -41,7 +41,7 @@ class TestToolTest {
         Files.createDirectories(reportsDir);
         copyFixture("TEST-com.example.PassingTest.xml");
 
-        var runner = new TestRunners.StubRunner(new MavenExecutionResult(0, "[INFO] BUILD SUCCESS", "", 5000));
+        var runner = new TestRunners.StubRunner(new MavenExecutionResult(0, "[INFO] BUILD SUCCESS", "", 5000, false));
         SyncToolSpecification spec = TestTool.create(config, runner, objectMapper);
 
         CallToolResult result = spec.call().apply(null, Map.of());
@@ -58,7 +58,7 @@ class TestToolTest {
         Files.createDirectories(reportsDir);
         copyFixture("TEST-com.example.FailingTest.xml");
 
-        var runner = new TestRunners.StubRunner(new MavenExecutionResult(1, "[ERROR] Tests failed", "", 8000));
+        var runner = new TestRunners.StubRunner(new MavenExecutionResult(1, "[ERROR] Tests failed", "", 8000, false));
         SyncToolSpecification spec = TestTool.create(config, runner, objectMapper);
 
         CallToolResult result = spec.call().apply(null, Map.of());
@@ -67,14 +67,14 @@ class TestToolTest {
         assertThat(json).contains("FAILURE");
         assertThat(json).contains("shouldReturnUser");
         assertThat(json).contains("\"testsFailed\":2");
-        assertThat(json).contains("\"output\""); // filtered output on failure
+        assertThat(json).doesNotContain("\"output\""); // no output when surefire XML is available
     }
 
     @Test
     void shouldFallbackToCompilationErrorsWhenNoXml() {
         // No surefire-reports directory → compilation failure fallback
         String stdout = "[ERROR] /tmp/src/main/java/Foo.java:[10,5] cannot find symbol\n[ERROR] BUILD FAILURE";
-        var runner = new TestRunners.StubRunner(new MavenExecutionResult(1, stdout, "", 3000));
+        var runner = new TestRunners.StubRunner(new MavenExecutionResult(1, stdout, "", 3000, false));
         SyncToolSpecification spec = TestTool.create(config, runner, objectMapper);
 
         CallToolResult result = spec.call().apply(null, Map.of());
@@ -106,6 +106,18 @@ class TestToolTest {
         assertThat(runner.capturedArgs).contains("-X");
     }
 
+    @Test
+    void shouldReturnTimeoutStatus() {
+        var runner = new TestRunners.StubRunner(new MavenExecutionResult(-1, "partial", "", 120000, true));
+        SyncToolSpecification spec = TestTool.create(config, runner, objectMapper);
+
+        CallToolResult result = spec.call().apply(null, Map.of());
+
+        String json = result.content().getFirst().toString();
+        assertThat(json).contains("TIMEOUT");
+        assertThat(result.isError()).isTrue();
+    }
+
     @Nested
     class SmartStackTraces {
 
@@ -129,7 +141,7 @@ class TestToolTest {
             Files.writeString(reportsDir.resolve("TEST-com.example.ChainTest.xml"), xml);
 
             var runner = new TestRunners.StubRunner(
-                    new MavenExecutionResult(1, "[ERROR] Tests failed", "", 5000));
+                    new MavenExecutionResult(1, "[ERROR] Tests failed", "", 5000, false));
             SyncToolSpecification spec = TestTool.create(config, runner, objectMapper);
 
             CallToolResult result = spec.call().apply(null,
@@ -155,7 +167,7 @@ class TestToolTest {
             copyFixture("TEST-com.example.FailingTestWithLogs.xml");
 
             var runner = new TestRunners.StubRunner(
-                    new MavenExecutionResult(1, "[ERROR] Tests failed", "", 5000));
+                    new MavenExecutionResult(1, "[ERROR] Tests failed", "", 5000, false));
             SyncToolSpecification spec = TestTool.create(config, runner, objectMapper);
 
             CallToolResult result = spec.call().apply(null, Map.of());
@@ -171,7 +183,7 @@ class TestToolTest {
             copyFixture("TEST-com.example.FailingTestWithLogs.xml");
 
             var runner = new TestRunners.StubRunner(
-                    new MavenExecutionResult(1, "[ERROR] Tests failed", "", 5000));
+                    new MavenExecutionResult(1, "[ERROR] Tests failed", "", 5000, false));
             SyncToolSpecification spec = TestTool.create(config, runner, objectMapper);
 
             CallToolResult result = spec.call().apply(null,
@@ -186,10 +198,8 @@ class TestToolTest {
     class MavenOutputFiltering {
 
         @Test
-        void shouldFilterMavenOutputOnFailure() throws IOException {
-            Files.createDirectories(reportsDir);
-            copyFixture("TEST-com.example.FailingTest.xml");
-
+        void shouldFilterMavenOutputOnFailureWithoutSurefireXml() {
+            // No surefire-reports directory — output filtering applies when no surefire XML is available
             String rawOutput = """
                     [INFO] Scanning for projects...
                     [INFO] --- maven-surefire-plugin:3.2.5:test (default-test) @ my-project ---
@@ -197,7 +207,7 @@ class TestToolTest {
                     [ERROR] Tests run: 4, Failures: 2, Errors: 0, Skipped: 0
                     [ERROR] BUILD FAILURE""";
             var runner = new TestRunners.StubRunner(
-                    new MavenExecutionResult(1, rawOutput, "", 5000));
+                    new MavenExecutionResult(1, rawOutput, "", 5000, false));
             SyncToolSpecification spec = TestTool.create(config, runner, objectMapper);
 
             CallToolResult result = spec.call().apply(null, Map.of());
@@ -216,43 +226,18 @@ class TestToolTest {
     class AppPackageDerivation {
 
         @Test
-        void shouldDeriveAppPackageFromPomXml() throws IOException {
-            Files.writeString(tempDir.resolve("pom.xml"), """
-                    <?xml version="1.0" encoding="UTF-8"?>
-                    <project>
-                      <groupId>io.github.mavenmcp</groupId>
-                      <artifactId>test-project</artifactId>
-                      <version>1.0</version>
-                    </project>
-                    """);
-
-            String derived = TestTool.extractAppPackage(Map.of(), tempDir);
-
-            assertThat(derived).isEqualTo("io.github.mavenmcp");
-        }
-
-        @Test
-        void shouldUseExplicitAppPackageOverDerived() throws IOException {
-            Files.writeString(tempDir.resolve("pom.xml"), """
-                    <?xml version="1.0" encoding="UTF-8"?>
-                    <project>
-                      <groupId>io.github.mavenmcp</groupId>
-                      <artifactId>test-project</artifactId>
-                      <version>1.0</version>
-                    </project>
-                    """);
-
-            String explicit = TestTool.extractAppPackage(
-                    Map.of("appPackage", "com.custom.pkg"), tempDir);
-
-            assertThat(explicit).isEqualTo("com.custom.pkg");
-        }
-
-        @Test
-        void shouldReturnNullWhenNoPomXml() {
-            String derived = TestTool.extractAppPackage(Map.of(), tempDir.resolve("nonexistent"));
+        void shouldReturnNullWhenNoExplicitAppPackage() {
+            String derived = TestTool.extractAppPackage(Map.of());
 
             assertThat(derived).isNull();
+        }
+
+        @Test
+        void shouldUseExplicitAppPackage() {
+            String explicit = TestTool.extractAppPackage(
+                    Map.of("appPackage", "com.custom.pkg"));
+
+            assertThat(explicit).isEqualTo("com.custom.pkg");
         }
     }
 

@@ -24,7 +24,7 @@ final class TestRunners {
         }
 
         @Override
-        public MavenExecutionResult execute(String goal, List<String> extraArgs, Path exe, Path dir) {
+        public MavenExecutionResult execute(String goal, List<String> extraArgs, Path exe, Path dir, int timeoutMs) {
             return result;
         }
     }
@@ -34,16 +34,16 @@ final class TestRunners {
         List<String> capturedArgs;
 
         @Override
-        public MavenExecutionResult execute(String goal, List<String> extraArgs, Path exe, Path dir) {
+        public MavenExecutionResult execute(String goal, List<String> extraArgs, Path exe, Path dir, int timeoutMs) {
             capturedArgs = extraArgs;
-            return new MavenExecutionResult(0, "", "", 100);
+            return new MavenExecutionResult(0, "", "", 100, false);
         }
     }
 
     /** Always throws MavenExecutionException. */
     static class ThrowingRunner extends MavenRunner {
         @Override
-        public MavenExecutionResult execute(String goal, List<String> extraArgs, Path exe, Path dir) {
+        public MavenExecutionResult execute(String goal, List<String> extraArgs, Path exe, Path dir, int timeoutMs) {
             throw new MavenExecutionException("Simulated failure", new RuntimeException(), 0);
         }
     }

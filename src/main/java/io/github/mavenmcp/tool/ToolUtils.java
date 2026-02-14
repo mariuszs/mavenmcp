@@ -4,6 +4,13 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.github.mavenmcp.maven.MavenExecutionResult;
+import io.github.mavenmcp.model.BuildResult;
+import io.modelcontextprotocol.spec.McpSchema.CallToolResult;
+import io.modelcontextprotocol.spec.McpSchema.TextContent;
+
 /**
  * Shared utilities for MCP tool handlers.
  */
@@ -59,5 +66,36 @@ final class ToolUtils {
             return num.intValue();
         }
         return defaultValue;
+    }
+
+    /**
+     * Build a timeout BuildResult and return as error CallToolResult.
+     *
+     * @param execResult   the timed-out execution result
+     * @param objectMapper Jackson mapper for JSON serialization
+     * @return a CallToolResult with isError=true and TIMEOUT status
+     * @throws JsonProcessingException if serialization fails
+     */
+    static CallToolResult handleTimeout(MavenExecutionResult execResult, ObjectMapper objectMapper)
+            throws JsonProcessingException {
+        var buildResult = new BuildResult(
+                BuildResult.TIMEOUT, execResult.duration(),
+                null, null, null, null, null, execResult.stdout());
+        String json = objectMapper.writeValueAsString(buildResult);
+        return new CallToolResult(List.of(new TextContent(json)), true);
+    }
+
+    /**
+     * Serialize a BuildResult to a CallToolResult.
+     *
+     * @param buildResult  the build result to serialize
+     * @param objectMapper Jackson mapper for JSON serialization
+     * @return a CallToolResult with isError=false
+     * @throws JsonProcessingException if serialization fails
+     */
+    static CallToolResult toResult(BuildResult buildResult, ObjectMapper objectMapper)
+            throws JsonProcessingException {
+        String json = objectMapper.writeValueAsString(buildResult);
+        return new CallToolResult(List.of(new TextContent(json)), false);
     }
 }

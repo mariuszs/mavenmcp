@@ -33,6 +33,10 @@ public final class CleanTool {
                   "type": "array",
                   "items": { "type": "string" },
                   "description": "Additional Maven CLI arguments"
+                },
+                "timeout": {
+                  "type": "integer",
+                  "description": "Timeout in milliseconds (default: 120000)"
                 }
               }
             }
@@ -54,11 +58,16 @@ public final class CleanTool {
                 (exchange, params) -> {
                     try {
                         List<String> args = ToolUtils.extractArgs(params);
+                        int timeoutMs = ToolUtils.extractInt(params, "timeout", MavenRunner.DEFAULT_TIMEOUT_MS);
                         log.info("maven_clean called with args: {}", args);
 
                         MavenExecutionResult execResult = runner.execute(
                                 "clean", args,
-                                config.mavenExecutable(), config.projectDir());
+                                config.mavenExecutable(), config.projectDir(), timeoutMs);
+
+                        if (execResult.timedOut()) {
+                            return ToolUtils.handleTimeout(execResult, objectMapper);
+                        }
 
                         String status = execResult.isSuccess() ? BuildResult.SUCCESS : BuildResult.FAILURE;
                         String output = execResult.isSuccess() ? null : execResult.stdout();
@@ -67,8 +76,7 @@ public final class CleanTool {
                                 status, execResult.duration(),
                                 null, null, null, null, null, output);
 
-                        String json = objectMapper.writeValueAsString(buildResult);
-                        return new CallToolResult(List.of(new TextContent(json)), false);
+                        return ToolUtils.toResult(buildResult, objectMapper);
 
                     } catch (MavenExecutionException e) {
                         log.error("maven_clean failed: {}", e.getMessage());

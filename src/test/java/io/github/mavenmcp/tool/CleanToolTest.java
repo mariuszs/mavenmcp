@@ -23,7 +23,7 @@ class CleanToolTest {
 
     @Test
     void shouldReturnSuccessOnCleanBuild() {
-        var runner = new TestRunners.StubRunner(new MavenExecutionResult(0, "[INFO] BUILD SUCCESS", "", 500));
+        var runner = new TestRunners.StubRunner(new MavenExecutionResult(0, "[INFO] BUILD SUCCESS", "", 500, false));
         SyncToolSpecification spec = CleanTool.create(config, runner, objectMapper);
 
         CallToolResult result = spec.call().apply(null, Map.of());
@@ -35,7 +35,7 @@ class CleanToolTest {
 
     @Test
     void shouldReturnFailureWithOutputOnError() {
-        var runner = new TestRunners.StubRunner(new MavenExecutionResult(1, "[ERROR] Clean failed", "", 200));
+        var runner = new TestRunners.StubRunner(new MavenExecutionResult(1, "[ERROR] Clean failed", "", 200, false));
         SyncToolSpecification spec = CleanTool.create(config, runner, objectMapper);
 
         CallToolResult result = spec.call().apply(null, Map.of());
@@ -66,4 +66,15 @@ class CleanToolTest {
         assertThat(runner.capturedArgs).containsExactly("-X", "-Pfoo");
     }
 
+    @Test
+    void shouldReturnTimeoutStatus() {
+        var runner = new TestRunners.StubRunner(new MavenExecutionResult(-1, "partial", "", 120000, true));
+        SyncToolSpecification spec = CleanTool.create(config, runner, objectMapper);
+
+        CallToolResult result = spec.call().apply(null, Map.of());
+
+        String json = result.content().getFirst().toString();
+        assertThat(json).contains("TIMEOUT");
+        assertThat(result.isError()).isTrue();
+    }
 }

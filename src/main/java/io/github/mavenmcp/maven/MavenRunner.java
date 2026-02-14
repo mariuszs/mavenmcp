@@ -8,6 +8,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -23,6 +24,9 @@ public class MavenRunner {
 
     private static final Logger log = LoggerFactory.getLogger(MavenRunner.class);
 
+    /** Default timeout for Maven executions in milliseconds (2 minutes). */
+    public static final int DEFAULT_TIMEOUT_MS = 120_000;
+
     /**
      * Execute a Maven goal as a child process.
      *
@@ -30,11 +34,12 @@ public class MavenRunner {
      * @param extraArgs       additional Maven CLI arguments (e.g., ["-DskipTests"])
      * @param mavenExecutable path to the Maven executable (mvnw or mvn)
      * @param projectDir      the project working directory
+     * @param timeoutMs       maximum time to wait for the process in milliseconds
      * @return the execution result with exit code, captured output, and duration
      * @throws MavenExecutionException if the process cannot be started
      */
     public MavenExecutionResult execute(String goal, List<String> extraArgs,
-                                        Path mavenExecutable, Path projectDir) {
+                                        Path mavenExecutable, Path projectDir, int timeoutMs) {
         List<String> command = buildCommand(mavenExecutable, goal, extraArgs);
         log.info("Executing: {}", String.join(" ", command));
 
@@ -50,14 +55,23 @@ public class MavenRunner {
             CompletableFuture<String> stdoutFuture = readStreamAsync(process.getInputStream());
             CompletableFuture<String> stderrFuture = readStreamAsync(process.getErrorStream());
 
-            int exitCode = process.waitFor();
+            boolean finished = process.waitFor(timeoutMs, TimeUnit.MILLISECONDS);
             long duration = System.currentTimeMillis() - startTime;
 
+            if (!finished) {
+                log.warn("Maven process timed out after {}ms, killing", timeoutMs);
+                process.destroyForcibly();
+                String stdout = stdoutFuture.getNow("");
+                String stderr = stderrFuture.getNow("");
+                return new MavenExecutionResult(-1, stdout, stderr, duration, true);
+            }
+
+            int exitCode = process.exitValue();
             String stdout = stdoutFuture.join();
             String stderr = stderrFuture.join();
 
             log.info("Maven exited with code {} in {}ms", exitCode, duration);
-            return new MavenExecutionResult(exitCode, stdout, stderr, duration);
+            return new MavenExecutionResult(exitCode, stdout, stderr, duration, false);
 
         } catch (IOException e) {
             long duration = System.currentTimeMillis() - startTime;

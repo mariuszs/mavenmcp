@@ -22,7 +22,7 @@ public final class MavenOutputFilter {
      * Filter raw Maven stdout, keeping only actionable lines.
      *
      * @param rawOutput raw Maven console output
-     * @return filtered output with only actionable lines, or null if input is null
+     * @return filtered output with only actionable lines, or null if input is null/empty
      */
     public static String filter(String rawOutput) {
         if (rawOutput == null) {
@@ -89,7 +89,7 @@ public final class MavenOutputFilter {
             }
         }
 
-        return kept.isEmpty() ? "" : String.join("\n", kept);
+        return kept.isEmpty() ? null : String.join("\n", kept);
     }
 
     private static boolean containsActionableKeyword(String line) {

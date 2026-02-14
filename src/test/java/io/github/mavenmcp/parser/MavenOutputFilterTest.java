@@ -47,7 +47,7 @@ class MavenOutputFilterTest {
 
         String result = MavenOutputFilter.filter(input);
 
-        assertThat(result).isEmpty();
+        assertThat(result).isNull();
     }
 
     @Test

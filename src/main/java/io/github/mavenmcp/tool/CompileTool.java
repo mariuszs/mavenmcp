@@ -8,6 +8,7 @@ import io.github.mavenmcp.maven.MavenExecutionException;
 import io.github.mavenmcp.maven.MavenExecutionResult;
 import io.github.mavenmcp.maven.MavenRunner;
 import io.github.mavenmcp.model.BuildResult;
+import io.github.mavenmcp.model.BuildStatus;
 import io.github.mavenmcp.parser.CompilationOutputParser;
 import io.modelcontextprotocol.json.jackson.JacksonMcpJsonMapper;
 import io.modelcontextprotocol.server.McpServerFeatures.SyncToolSpecification;
@@ -66,9 +67,9 @@ public final class CompileTool {
                         var parseResult = CompilationOutputParser.parse(
                                 execResult.stdout(), config.projectDir());
 
-                        String status = execResult.isSuccess() ? BuildResult.SUCCESS : BuildResult.FAILURE;
+                        var status = execResult.isSuccess() ? BuildStatus.SUCCESS : BuildStatus.FAILURE;
                         // Raw output only on failure
-                        String output = execResult.isSuccess() ? null : execResult.stdout();
+                        var output = execResult.isSuccess() ? null : execResult.stdout();
 
                         var buildResult = new BuildResult(
                                 status, execResult.duration(),

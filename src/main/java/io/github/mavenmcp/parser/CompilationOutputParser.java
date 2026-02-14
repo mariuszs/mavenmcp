@@ -105,7 +105,7 @@ public final class CompilationOutputParser {
             if (filePath.isAbsolute() && filePath.startsWith(projectDir)) {
                 return projectDir.relativize(filePath).toString();
             }
-        } catch (Exception e) {
+        } catch (Exception _) {
             // If relativization fails, return original
         }
         return absolutePath;

@@ -8,6 +8,8 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -22,6 +24,7 @@ import org.slf4j.LoggerFactory;
 public class MavenRunner {
 
     private static final Logger log = LoggerFactory.getLogger(MavenRunner.class);
+    private static final ExecutorService STREAM_READER_EXECUTOR = Executors.newVirtualThreadPerTaskExecutor();
 
     /**
      * Execute a Maven goal as a child process.
@@ -90,6 +93,6 @@ public class MavenRunner {
                 log.warn("Error reading process stream: {}", e.getMessage());
                 return "";
             }
-        });
+        }, STREAM_READER_EXECUTOR);
     }
 }

@@ -1,6 +1,7 @@
 package io.github.mavenmcp;
 
 import java.io.PrintStream;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 /**
@@ -11,6 +12,7 @@ import java.lang.reflect.Method;
 public class Bootstrap {
 
     static final int REQUIRED_JAVA_VERSION = 21;
+    static final String SERVER_CLASS = "io.github.mavenmcp.MavenMcpServer";
 
     public static void main(String[] args) {
         int currentVersion = Runtime.version().feature();
@@ -19,13 +21,27 @@ public class Bootstrap {
         }
 
         try {
-            Class<?> serverClass = Class.forName("io.github.mavenmcp.MavenMcpServer");
-            Method mainMethod = serverClass.getMethod("main", String[].class);
-            mainMethod.invoke(null, (Object) args);
-        } catch (Exception e) {
-            System.err.println("Failed to start maven-mcp: " + e.getMessage());
+            delegateToServer(SERVER_CLASS, args);
+        } catch (ReflectiveOperationException e) {
+            Throwable cause = e instanceof InvocationTargetException && e.getCause() != null
+                    ? e.getCause()
+                    : e;
+            System.err.println("Failed to start maven-mcp: " + cause.getMessage());
             System.exit(1);
         }
+    }
+
+    /**
+     * Loads the server class by name and invokes its main method via reflection.
+     *
+     * @param className fully qualified server class name
+     * @param args CLI arguments to pass through
+     * @throws ReflectiveOperationException if the class cannot be loaded or invoked
+     */
+    static void delegateToServer(String className, String[] args) throws ReflectiveOperationException {
+        Class<?> serverClass = Class.forName(className);
+        Method mainMethod = serverClass.getMethod("main", String[].class);
+        mainMethod.invoke(null, (Object) args);
     }
 
     /**

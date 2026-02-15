@@ -6,7 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Maven MCP Server — a Java-based MCP (Model Context Protocol) server that wraps Maven CLI operations (`compile`, `test`, `package`, `clean`) and returns structured, parsed output (errors with file/line/column, test results with pass/fail details) to AI agents via stdio transport.
 
-**Current status:** Pre-implementation specification phase. `REQUIREMENTS.md` is finalized. `SPEC.md` (architecture/design) is pending. No source code exists yet.
+**Repository:** `git@github.com:MavenSkills/mcp-server.git`
+
+**Current status:** Active development. Core server implemented with compile, test, package, clean tools. Bootstrap entry point with JVM version check.
 
 ## Agent Roles (System Prompts)
 
@@ -38,7 +40,7 @@ Changes live in `openspec/changes/`, archived ones in `openspec/changes/archive/
 
 ## Key Technical Decisions (from REQUIREMENTS.md)
 
-- **Language:** Java 25+, built with Maven (dogfooding)
+- **Language:** Java 21+ (LTS), built with Maven (dogfooding)
 - **MCP SDK:** `io.modelcontextprotocol.sdk:mcp` v0.17+ (official Java SDK, stdio transport)
 - **Architecture:** Wrapper CLI — spawns Maven as external process via `ProcessBuilder`, parses stdout/stderr
 - **Scope:** Single-module projects only (no reactor/multi-module)

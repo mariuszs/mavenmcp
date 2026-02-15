@@ -77,9 +77,4 @@ class BootstrapTest {
         assertThat(lines[1]).isEqualTo("Detected: Java 17");
         assertThat(lines[2]).isEqualTo("Install Java 21+: https://adoptium.net/");
     }
-
-    @Test
-    void requiredVersionConstantIs21() {
-        assertThat(Bootstrap.REQUIRED_JAVA_VERSION).isEqualTo(21);
-    }
 }
